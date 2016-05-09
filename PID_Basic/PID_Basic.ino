@@ -43,11 +43,60 @@ void configureLSM9DS0(void)
   //lsm.setupGyro(lsm.LSM9DS0_GYROSCALE_2000DPS);
 }
 
+
+#define filterSamples   50              // filterSamples should  be an odd number, no smaller than 3
+double sensSmoothArray1 [filterSamples];   // array for holding raw sensor values for sensor1 
+double sensSmoothArray2 [filterSamples];
+
+double digitalSmooth(double rawIn, double *sensSmoothArray){     // "int *sensSmoothArray" passes an array to the function - the asterisk indicates the array name is a pointer
+  int j, k;
+  double temp, top, bottom;
+  long total;
+  static int i;
+  static double sorted[filterSamples];
+  boolean done;
+
+  i = (i + 1) % filterSamples;    // increment counter and roll over if necc. -  % (modulo operator) rolls over variable
+  sensSmoothArray[i] = rawIn;                 // input new data into the oldest slot
+
+  for (j=0; j<filterSamples; j++){     // transfer data array into anther array for sorting and averaging
+    sorted[j] = sensSmoothArray[j];
+  }
+
+  done = 0;                // flag to know when we're done sorting              
+  while(done != 1){        // simple swap sort, sorts numbers from lowest to highest
+    done = 1;
+    for (j = 0; j < (filterSamples - 1); j++){
+      if (sorted[j] > sorted[j + 1]){     // numbers are out of order - swap
+        temp = sorted[j + 1];
+        sorted [j+1] =  sorted[j] ;
+        sorted [j] = temp;
+        done = 0;
+      }
+    }
+  }
+
+  // throw out top and bottom 15% of samples - limit to throw out at least one from top and bottom
+  bottom = max(((filterSamples * 15)  / 100), 1); 
+  top = min((((filterSamples * 85) / 100) + 1  ), (filterSamples - 1));   // the + 1 is to make up for asymmetry caused by integer rounding
+  k = 0;
+  total = 0;
+  for ( j = bottom; j< top; j++){
+    total += sorted[j];  // total remaining indices
+    k++; 
+  }
+
+  return total / k;    // divide by number of samples
+}
+
+
+
+
 //Define Variables we'll be connecting to
 double Setpoint, Input, Output;
 
 //Specify the links and initial tuning parameters
-double Kp=1, Ki=0, Kd=0;
+double Kp=1, Ki=0, Kd=1;
 PID myPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
 
 void setup()
@@ -74,7 +123,8 @@ void setup()
   Setpoint = 180;
 
   //turn the PID on
-  myPID.SetOutputLimits(-128,128);
+  myPID.SetOutputLimits(0,255);
+  myPID.SetSampleTime(10);
   myPID.SetMode(AUTOMATIC);
 }
 
@@ -91,6 +141,8 @@ void loop()
     
     Input = orientation.roll;
     Input = (Input < 0)?-Input:380-Input;
+
+    Input = digitalSmooth(Input, sensSmoothArray1);
     
     //Input = (Input < 0)? 360+Input: Input;
     //Serial.print(roll);
@@ -113,41 +165,32 @@ void loop()
     
     //Output = (Output > 255)?255:Output;
 
-    double rad = Input * (0.01745329251);
-    double offset = -60 * cos(rad);  
-    if(offset < 0) offset = 0;    
-    
-    //if(Output < 20) Output = 20;
-    
+    //double rad = Input * (0.01745329251);
+    //double offset = -60 * cos(rad);  
+    //if(offset < 0) offset = 0;    
     
     Serial.print(Input);
-    Serial.print(" -> ");
+    Serial.print("\t");
     //Serial.print(offset); 
-    Serial.print(x);
-    Serial.print(" -> ");
+    //Serial.print("\t");
     Serial.print(Output); 
-    Serial.print(" -> ");
-    Serial.println(Output+offset); 
+    Serial.print("\t");
 
-    double write_val = Output+offset;
-    if(write_val > 200) write_val = 200;
+
+    //double write_val = Output;//+offset;
+    double write_val = digitalSmooth(Output, sensSmoothArray2);
+    if(write_val > 255) write_val = 255;
     if(write_val < 0) write_val = 0;
-    //analogWrite(PIN_OUTPUT, Output+offset);
-    
-    while(Input > 180);
-    
-    
+    analogWrite(PIN_OUTPUT, write_val);
+        
+    Serial.println(write_val); 
+    Serial.print("\t\r\n");
   }
   else{
     Serial.println("No ahrs");
-  
-  
-  
   }
-  if(++x > 255) x= 0;
-  analogWrite(PIN_OUTPUT, x);
   
-  delay(100);
+  delay(5);
 
 }
 

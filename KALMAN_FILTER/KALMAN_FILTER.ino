@@ -4,12 +4,14 @@
 //Define Variables we'll be connecting to
 double Setpoint, Input, Output;
 //Specify the links and initial tuning parameters
-double Kp=.35, Ki=0, Kd=0.05;
+//double Kp=.35, Ki=0, Kd=0.05;
+double Kp=1, Ki=0, Kd=.1;
 PID myPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
 void setupPID()
 {
   Setpoint = 180;
   myPID.SetOutputLimits(-128,128);
+  myPID.SetSampleTime(10);
   //turn the PID on
   myPID.SetMode(AUTOMATIC);
 }
@@ -95,8 +97,8 @@ void setup() {
   double roll  = atan2(accY, accZ) * RAD_TO_DEG;
   double pitch = atan(-accX / sqrt(accY * accY + accZ * accZ)) * RAD_TO_DEG;
 #else // Eq. 28 and 29
-  double roll  = atan(accY / sqrt(accX * accX + accZ * accZ)) * RAD_TO_DEG;
   double pitch = atan2(-accX, accZ) * RAD_TO_DEG;
+  double roll  = atan(accY / sqrt(accX * accX + accZ * accZ)) * RAD_TO_DEG;
 #endif
 
   kalmanX.setAngle(roll); // Set starting angle
@@ -202,28 +204,30 @@ void loop() {
   double temperature = (double)tempRaw / 340.0 + 36.53;
   Serial.print(temperature); Serial.print("\t");
 #endif
+
+
+
+  double angle = kalAngleX;
   
-  Input = (kalAngleX < 0)?-kalAngleX:380-kalAngleX; 
-  Serial.print(Input);
-  Serial.print("\t");
-  
+  Input = (angle < 0)?-angle:380-angle; 
+  Serial.print(Input); Serial.print("\t");
+  Serial.print(Output); Serial.print("\t");
+    
   myPID.Compute();
   
-  double rad = kalAngleX * DEG_TO_RAD;
+  double rad = angle * DEG_TO_RAD;
   double offset = -80 * cos(rad);
-  
-  Serial.print(offset);
-  Serial.print(" + ");
-  Serial.print(Output);
+  Serial.print(offset); Serial.print("\t"); 
   
   offset += Output;  
   if(offset < 0) offset = 0; 
-  if(offset > 255) offset = 255;
-  Serial.print(offset);
-  
+  if(offset > 255) offset = 255;;
+  analogWrite(3, offset);
+
+
   Serial.print("\r\n");
   delay(2);
 
   
-  analogWrite(3, offset);
+
 }
