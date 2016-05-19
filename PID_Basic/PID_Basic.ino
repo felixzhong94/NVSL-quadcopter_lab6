@@ -1,7 +1,8 @@
-/********************************************************
- * PID Basic Example
- * Reading analog input 0 to control analog PWM output 3
- ********************************************************/
+#define filterSamples   25              // filterSamples should  be an odd number, no smaller than 3
+
+//Specify the links and initial tuning parameters
+double Kp=1, Ki=1, Kd=.2;
+
 #include <math.h> 
 
 #include <PID_v1.h>
@@ -44,7 +45,7 @@ void configureLSM9DS0(void)
 }
 
 
-#define filterSamples   50              // filterSamples should  be an odd number, no smaller than 3
+
 double sensSmoothArray1 [filterSamples];   // array for holding raw sensor values for sensor1 
 double sensSmoothArray2 [filterSamples];
 
@@ -95,8 +96,7 @@ double digitalSmooth(double rawIn, double *sensSmoothArray){     // "int *sensSm
 //Define Variables we'll be connecting to
 double Setpoint, Input, Output;
 
-//Specify the links and initial tuning parameters
-double Kp=1, Ki=0, Kd=1;
+
 PID myPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
 
 void setup()
@@ -159,6 +159,7 @@ void loop()
       Serial.println(" - OFF");
     }*/
   
+    Serial.print(180-Input); Serial.print("\t");
     myPID.Compute();
     
     
@@ -169,22 +170,19 @@ void loop()
     //double offset = -60 * cos(rad);  
     //if(offset < 0) offset = 0;    
     
-    Serial.print(Input);
-    Serial.print("\t");
     //Serial.print(offset); 
     //Serial.print("\t");
-    Serial.print(Output); 
-    Serial.print("\t");
+    //Serial.print(Output); Serial.print("\t");
 
 
     //double write_val = Output;//+offset;
-    double write_val = digitalSmooth(Output, sensSmoothArray2);
+    double write_val = Output;//= digitalSmooth(Output, sensSmoothArray2);
     if(write_val > 255) write_val = 255;
     if(write_val < 0) write_val = 0;
     analogWrite(PIN_OUTPUT, write_val);
         
-    Serial.println(write_val); 
-    Serial.print("\t\r\n");
+    //Serial.println(write_val); Serial.print("\t");
+    Serial.print("\r\n");
   }
   else{
     Serial.println("No ahrs");
