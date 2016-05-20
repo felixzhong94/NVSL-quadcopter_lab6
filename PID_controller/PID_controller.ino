@@ -1,9 +1,9 @@
 #define KP 0.5
-#define KI 1.0
-#define KD 0.5
+#define KI 1.75
+#define KD 0.4
 #define K_DECAY 1.007
 
-#define OUTPUT_MAX 200
+#define OUTPUT_MAX 255
 #define OUTPUT_MIN 0
 
 #define SETPOINT 180
