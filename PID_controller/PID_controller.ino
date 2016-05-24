@@ -2,6 +2,7 @@
 #define KI 1.75
 #define KD 0.4
 #define K_DECAY 1.007
+#define Dt 25
 
 #define OUTPUT_MAX 255
 #define OUTPUT_MIN 0
@@ -138,7 +139,7 @@ void loop()
   else{
     Serial.println("No ahrs");
   }
-  delay(25);
+  delay(Dt);
 }
 
 double iTerm = 0, lastError = 0;
